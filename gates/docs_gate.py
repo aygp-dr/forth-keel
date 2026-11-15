@@ -20,7 +20,7 @@ import subprocess
 import sys
 
 REQUIRED_SECTIONS = ["Scope", "Working rules", "Survey and names", "Architecture", "Build sequence", "Requirements",
-                     "Experiments", "Resources", "Gates", "Open items", "Review ledger", "Derived files"]
+                     "Experiments", "Resources", "Gates", "Debug toolchain", "Open items", "Review ledger", "Derived files"]
 SKIP_DIRS = {".git", "vendor", "node_modules", "fixtures"}
 HEADER = "Derived from spec.org"
 LABEL = re.compile(r"^\s*[-*] \[(E|P|H|I)\] ")

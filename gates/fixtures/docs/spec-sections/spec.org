@@ -15,6 +15,7 @@ flowchart LR
 * Experiments
 * Resources
 * Gates
+* Debug toolchain
 * Review ledger
 * Derived files
 #+begin_src markdown :tangle README.md

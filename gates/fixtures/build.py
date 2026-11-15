@@ -21,6 +21,7 @@ flowchart LR
 * Experiments
 * Resources
 * Gates
+* Debug toolchain
 * Open items
 * Review ledger
 * Derived files
