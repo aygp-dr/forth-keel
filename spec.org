@@ -490,6 +490,7 @@ flowchart LR
 | 005 | delay-force          | R-P-05           | planned                |
 | 006 | cheney-gc            | R-P-06           | planned                |
 | 007 | reader               | R-P-07           | planned                |
+| 008 | frames-on-keel       | R-F-01, R-K-02   | proof passes           |
 
 * Resources
 
@@ -672,7 +673,6 @@ Documentation for all of this is in [[file:docs/debugging.md][docs/debugging.md]
 |-----------------------------------------------------------+--------------------------------------------------------|
 | Layer-1 sea-trials (400-499) do not exist yet             | experiment 003 reaching refinement                     |
 | =.out= files assume gforth's =.= and =.r= spacing          | first host that fails only under =--loose=             |
-| =nand= is emulated on gforth in exp 001                   | M2 provides a real =nand=                              |
 | WAForth support for the =\ layer: 0= tests is unverified  | M4b                                                    |
 | Mermaid diagrams are syntax-checked, not render-checked   | a diagram renders wrongly on GitHub                     |
 

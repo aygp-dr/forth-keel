@@ -18,6 +18,11 @@ reconciled at spec v0.2.
   be checked on a host, control flow cannot.
 - Target rule still stands: yes, frames use keel primitives only (R-F-01, R-F-02).
 - Reconcile: re-run the same 432 checks on keel-rs at M3.
+- Reconciled 2026-11-15 by experiment 008: the same 432 checks pass against
+  the Rust keel, where =nand= is a real primitive rather than =and invert=,
+  and the frames source now needs no number literal, so gforth's number
+  parser is no longer borrowed either. Still outstanding from this entry:
+  control flow, the return stack and the compiler, which is M3 proper.
 
 * 2026-11-15 — sea-trials changed after the corpus tarball was sent
 - Deviation: =sea-trials/= differs from =forth-oracle-corpus.tar.gz=:
