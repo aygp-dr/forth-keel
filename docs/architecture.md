@@ -294,7 +294,8 @@ flowchart LR
   root --> spec["spec.org (governs)"]
   root --> derived["README.org AGENTS.md CLAUDE.md (tangled)"]
   root --> docs["docs/ architecture.md, diagrams/, review-ledger.org"]
-  root --> keel["keel/ (M2)"]
+  keelrepo["aygp-dr/keel-rs (M2, M4): keel/ keel-wasm/"]
+  root -.-> keelrepo
   root --> frames["frames/ (M3)"]
   root --> planking["planking/ (M6)"]
   root --> trials["sea-trials/ tests/*.fs, *.out, run.sh"]

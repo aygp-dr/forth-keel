@@ -40,3 +40,20 @@ reconciled at spec v0.2.
   contradicts =spec.org=.
 - Reconcile: decide at v0.2 whether =experiments/README.md= is tangled
   from the spec's Experiments table.
+
+* 2026-11-15 — the keel lives in its own repository
+- Deviation: the =* Scope= table gave the keel a =keel/= directory in
+  this repository; it is now https://github.com/aygp-dr/keel-rs.
+- Why reality demanded it: M2 (native, =cargo test=) and M4 (wasm32,
+  wasm-bindgen) are two targets over one copy of the thirteen
+  primitives. A cargo workspace holds both; a directory here would
+  either duplicate the kernel or make this repository a Rust project.
+- Consequence for the labels: =[E]= means "observed in this
+  repository", so the 26 passing tests in =keel-rs= cannot mark R-K-01
+  or R-K-04 as =[E]= here. Both stay =[H]= even though their tests pass,
+  which understates what is known.
+- Target rule still stands: yes, every keel requirement is decided by a
+  per-primitive test, wherever that test lives.
+- Reconcile: at v0.2 either define a label for evidence observed in a
+  named sibling repository, or gate =keel-rs= from here so its result is
+  observed in this repository.

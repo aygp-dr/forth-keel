@@ -16,15 +16,24 @@ cited source, =[H]= hypothesis to be tested, =[I]= author inference.
 forth-keel builds a Forth system in three layers, each written on top of
 the one below, and tests every layer against a fixed oracle corpus:
 
-| Layer   | Directory    | Written in             | Contents                                             |
-|---------+--------------+------------------------+------------------------------------------------------|
-| keel    | =keel/=      | host language (Rust, C) | 13 primitives and the inner interpreter              |
-| frames  | =frames/=    | Forth                  | stack words, arithmetic, control flow, compiler, outer interpreter |
-| planking| =planking/=  | Forth                  | tagged cells, pairs, symbols, closures, promises, Cheney GC, reader |
+| Layer   | Lives in            | Written in             | Contents                                             |
+|---------+---------------------+------------------------+------------------------------------------------------|
+| keel    | =aygp-dr/keel-rs=   | host language (Rust, C) | 13 primitives and the inner interpreter              |
+| frames  | =frames/=           | Forth                  | stack words, arithmetic, control flow, compiler, outer interpreter |
+| planking| =planking/=         | Forth                  | tagged cells, pairs, symbols, closures, promises, Cheney GC, reader |
 
 The SICP programs in =sea-trials/= are the acceptance tests. The browser
 host loads a WebAssembly build of the keel into a ClojureScript
 application.
+
+The keel is the only layer written in a host language, and it is the only
+one kept in its own repository: https://github.com/aygp-dr/keel-rs. One
+copy of the thirteen primitives serves both the native target that M2
+gates with =cargo test= and the wasm32 target that M4 gates, so splitting
+them would duplicate the kernel. M2 is written in Rust; a C keel stays
+possible, and would have to pass the same per-primitive tests. Because the
+=[E]= label means "observed in this repository", evidence that lives in
+=keel-rs= cannot carry it here — see =docs/review-ledger.org=. [I]
 
 ** Non-goals
 
@@ -430,7 +439,8 @@ flowchart LR
   root --> spec["spec.org (governs)"]
   root --> derived["README.org AGENTS.md CLAUDE.md (tangled)"]
   root --> docs["docs/ architecture.md, diagrams/, review-ledger.org"]
-  root --> keel["keel/ (M2)"]
+  keelrepo["aygp-dr/keel-rs (M2, M4): keel/ keel-wasm/"]
+  root -.-> keelrepo
   root --> frames["frames/ (M3)"]
   root --> planking["planking/ (M6)"]
   root --> trials["sea-trials/ tests/*.fs, *.out, run.sh"]
@@ -444,7 +454,7 @@ flowchart LR
 
 | ID      | Statement                                                                 | Oracle                                              | Label |
 |---------+---------------------------------------------------------------------------+-----------------------------------------------------+-------|
-| R-K-01  | The keel provides exactly =@ ! sp@ rp@ 0= + nand exit key emit execute um* um/mod=. | per-primitive vectors in =keel/= tests (M2)         | [H]   |
+| R-K-01  | The keel provides exactly =@ ! sp@ rp@ 0= + nand exit key emit execute um* um/mod=. | per-primitive vectors in =keel-rs= tests (M2)       | [H]   |
 | R-K-02  | Every host runs the same =frames/= and =planking/= source unchanged.      | sea-trials layer 0 and 1 on each host               | [H]   |
 | R-K-03  | Cells are at least 32 bits; the sea-trials assume no more than 32.        | sea-trials on a 32-bit host (WAForth, wasm32)       | [H]   |
 | R-K-04  | Memory is one linear byte-addressed region laid out as in the memory map. | keel-rs unit test of region boundaries (M2)         | [H]   |
@@ -655,7 +665,6 @@ Documentation for all of this is in [[file:docs/debugging.md][docs/debugging.md]
 
 | Item                                                      | Trigger that forces a revisit                          |
 |-----------------------------------------------------------+--------------------------------------------------------|
-| Host language for M2 (Rust native first, or C first)      | starting M2                                            |
 | Layer-1 sea-trials (400-499) do not exist yet             | experiment 003 reaching refinement                     |
 | =.out= files assume gforth's =.= and =.r= spacing          | first host that fails only under =--loose=             |
 | =nand= is emulated on gforth in exp 001                   | M2 provides a real =nand=                              |
@@ -741,6 +750,9 @@ check; =gmake tools= installs the pinned Mermaid parser.
 - [[file:experiments/README.md][experiments/]] — each conjecture with its falsification criteria
 - [[file:docs/review-ledger.org][docs/review-ledger.org]] — deviations declared so far, to reconcile at
   spec v0.2
+- https://github.com/aygp-dr/keel-rs — the keel itself: the thirteen
+  primitives and the inner interpreter in Rust, with a wasm-bindgen shim
+  for JavaScript hosts
 #+end_src
 
 #+begin_src markdown :tangle docs/architecture.md :noweb yes

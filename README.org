@@ -69,3 +69,6 @@ check; =gmake tools= installs the pinned Mermaid parser.
 - [[file:experiments/README.md][experiments/]] — each conjecture with its falsification criteria
 - [[file:docs/review-ledger.org][docs/review-ledger.org]] — deviations declared so far, to reconcile at
   spec v0.2
+- https://github.com/aygp-dr/keel-rs — the keel itself: the thirteen
+  primitives and the inner interpreter in Rust, with a wasm-bindgen shim
+  for JavaScript hosts
