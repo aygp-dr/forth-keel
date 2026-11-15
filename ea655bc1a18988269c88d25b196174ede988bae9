@@ -1,6 +1,6 @@
 Timeline
 - Probed the escaping mechanism before touching the spec: tangled a
-  throwaby org file containing ,#+TITLE and ,* lines to confirm
+  throwaway org file containing ,#+TITLE and ,* lines to confirm
   org-babel strips the protective comma. It does, so an Org derived file
   can be tangled from an Org spec byte for byte.
 - Wrote the README.org block, deleted README.md with git rm (leaving it
