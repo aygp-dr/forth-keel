@@ -1,0 +1,30 @@
+Timeline
+- Checked what the binary actually exposes before specifying anything:
+  prim_names[334] and vm_prims are both real symbols, which is what
+  makes resolving a primitive by name possible.
+- Failure: the first fbreak probe read vm_prims before the program
+  started and died with "Cannot access memory at address 0x1a8". The
+  table is filled in after the image loads, so fstart now breaks at
+  gforth_go first, and fbreak says to run it when the read fails.
+- Failure: a depth computed as sp0 - sp gave -1. sp sits above sp0 and
+  gforth pads the region, and the -DDEBUG engine caches the top of
+  stack in spTOS while this build keeps it at sp[0]. Rather than encode
+  a fragile offset, fstack prints cells from sp and the spec records
+  which build puts the top where.
+- Confirmed VM_DEBUG is a dead branch: the generated prim.i references
+  vm_debug, vm_out and printarg_n, none of which gforth 0.7.3 declares.
+- Ran the tangled helper end to end; the transcript in
+  docs/debugging.md is copied from that run, not invented.
+
+Reproduction
+- Command: gmake tangle && gdb -x tools/gforth.gdb -x drive.gdb --args
+  gforth -e '2 3 + . cr bye'  (drive.gdb: fstart; fbreak + if sp[0]==3
+  && sp[1]==2; continue; fstack 3; frstack 2)
+- Output: fbreak: "+" is primitive 53 at 0x405867; stopped at
+  engine/prim.i:2896 NAME("+"); sp = 0x800826ff0, sp[0] = 3 <- top,
+  sp[1] = 2.
+- Then: gmake all -> 432 and 78 checks 0 failures; pass 29 fail 0 skip
+  0; docs-gate: PASS (7 checks); 8 fixture assertions PASS;
+  tangle-check: PASS 21 files; exit 0.
+- Cell: nexus, FreeBSD 15.1-RELEASE amd64, GNU gdb 15.1 with Python
+  3.11.15, gforth 0.7.3 built with -g3 -ggdb3 -O0.
