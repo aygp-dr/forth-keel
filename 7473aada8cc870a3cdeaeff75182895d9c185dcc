@@ -1,0 +1,19 @@
+Timeline
+- The keel-rs repository was created and pushed first (26 tests, CI
+  green), so this commit records a fact rather than a plan.
+- Removed the "Host language for M2" open item: its trigger was
+  "starting M2", and M2 has started in Rust.
+- Noticed while editing that marking R-K-01 [E] would be wrong: the
+  spec defines [E] as observed in this repository, and the evidence now
+  lives in a sibling. Left both keel requirements [H] and declared the
+  gap in the ledger instead of quietly relabelling them.
+- The repo-layout diagram is a named block included in
+  docs/architecture.md, so the edit regenerated the .mmd and
+  architecture.md; the Mermaid gate re-parsed both.
+
+Reproduction
+- Command: gmake tangle && gmake all
+- Output: Tangled 21 code blocks; 432 and 78 checks 0 failures; pass 29
+  fail 0 skip 0; docs-gate: PASS (7 checks); 8 fixture assertions PASS;
+  tangle-check: PASS 21 files; exit 0.
+- Cell: nexus, FreeBSD 15.1-RELEASE amd64.
