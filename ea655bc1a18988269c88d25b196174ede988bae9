@@ -1,0 +1,29 @@
+Timeline
+- Probed the escaping mechanism before touching the spec: tangled a
+  throwaby org file containing ,#+TITLE and ,* lines to confirm
+  org-babel strips the protective comma. It does, so an Org derived file
+  can be tangled from an Org spec byte for byte.
+- Wrote the README.org block, deleted README.md with git rm (leaving it
+  would shadow README.org on GitHub, which ranks .md first).
+- Dropped the two embedded Mermaid diagrams rather than carry blocks
+  GitHub will not draw in Org; README.org links to
+  docs/architecture.md, where they do render.
+- The repo-layout diagram is a named block included in
+  docs/architecture.md, so editing it in the spec regenerated both the
+  .mmd file and architecture.md.
+
+Reproduction
+- Command: gmake tangle && gmake all
+- Output: Tangled 19 code blocks from spec.org; 432 checks 0 failures;
+  78 checks 0 failures; lint PASS 29 tests; layer 0 22/22, layer x 7/7,
+  pass 29 fail 0 skip 0; PASS runner rejects a wrong .out; PASS
+  sea-trials formatted; docs-gate: PASS (7 checks); 8 fixture
+  assertions PASS; tangle-check: PASS 19 files; exit 0.
+- Cell: nexus, FreeBSD 15.1-RELEASE amd64, GNU Emacs batch tangle,
+  gmake 4.4.1, gforth 0.7.3 built from source.
+
+Open risk
+- GitHub renders .org through org-ruby, whose inline-image support is
+  weaker than Markdown's. The shields.io badges use plain [[url]] image
+  links; if org-ruby does not draw them the fix is one block in the
+  spec, not a hand edit of README.org.
