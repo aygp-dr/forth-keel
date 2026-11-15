@@ -8,3 +8,6 @@ in `spec.org`; web pages are saved as `resources/vendor/<key>.html`.
 `resources/vendor/` is not tracked.
 
 The table of sources, pins, and uses is in `spec.org`, section Resources.
+One entry there, `cheney-1970`, is a citation rather than a file: its DOI
+resolves to the ACM digital library, which refuses automated requests, so
+the script does not try to fetch it.

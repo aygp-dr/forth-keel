@@ -495,9 +495,12 @@ flowchart LR
 
 Pulled by =scripts/pull-resources.sh= into =resources/vendor/= (not
 tracked). Git sources are pinned to the commit observed on 2026-11-15
-with =git ls-remote=. Web sources were confirmed with WebFetch on
-2026-11-15; this cell's shell could not reach them (proxy 403 or DNS
-failure), so the script must run on a cell with general web access. [E]
+with =git ls-remote=. Run on nexus on 2026-11-15, all seven git pins and
+all three fetchable pages succeeded. Two facts the first run established:
+=lars.nocrew.org= needs just over a minute to serve the dpANS glossary,
+so the page timeout is 180 seconds rather than 60; and =cheney-1970= is a
+citation rather than a fetched file, because its DOI resolves to
+=dl.acm.org=, which answers an automated request with HTTP 403. [E]
 
 | Key                | Source                                                                 | Pin / fetched           | Use |
 |--------------------+------------------------------------------------------------------------+-------------------------+-----|
@@ -511,7 +514,7 @@ failure), so the script must run on a cell with general web access. [E]
 | forth-2012-testsuite-annex | https://forth-standard.org/standard/testsuite                  | 2026-11-15              | Annex F: test harness and core tests |
 | dpans-core         | http://lars.nocrew.org/dpans/dpans6.htm                                | 2026-11-15              | 6.1 Core word glossary |
 | sicp               | https://mitp-content-server.mit.edu/books/content/sectbyfn/books_pres_0/6515/sicp.zip/index.html | 2026-11-15 | SICP 2nd ed., CC BY-SA 4.0 |
-| cheney-1970        | https://doi.org/10.1145/362790.362798                                  | 2026-11-15              | Cheney, CACM 13(11):677-678 |
+| cheney-1970        | https://doi.org/10.1145/362790.362798                                  | citation (ACM 403)      | Cheney, CACM 13(11):677-678 |
 
 #+begin_src markdown :tangle resources/README.md
 > Derived from spec.org @ v0.1. The spec governs; if this file disagrees with it, this file is the bug. Do not add facts here that are not in the spec — add them to the spec first.
@@ -524,6 +527,9 @@ in `spec.org`; web pages are saved as `resources/vendor/<key>.html`.
 `resources/vendor/` is not tracked.
 
 The table of sources, pins, and uses is in `spec.org`, section Resources.
+One entry there, `cheney-1970`, is a citation rather than a file: its DOI
+resolves to the ACM digital library, which refuses automated requests, so
+the script does not try to fetch it.
 #+end_src
 
 #+begin_src sh :tangle scripts/pull-resources.sh :shebang "#!/usr/bin/env bash"
@@ -540,7 +546,7 @@ pin() {  # key url commit
   echo "git  $1 @ $(git -C "$dest/$1" rev-parse --short HEAD)"
 }
 page() {  # key url
-  if curl -fsSL --max-time 60 -o "$dest/$1.html" "$2"; then echo "web  $1 ($(wc -c < "$dest/$1.html") bytes)"
+  if curl -fsSL --max-time 180 -o "$dest/$1.html" "$2"; then echo "web  $1 ($(wc -c < "$dest/$1.html") bytes)"
   else rm -f "$dest/$1.html"; echo "web  $1 FAILED: $2" >&2; return 1; fi
 }
 status=0
@@ -554,7 +560,6 @@ pin forsm           https://github.com/SupernaviX/forsm                712aad95b
 page forth-2012-testsuite-annex https://forth-standard.org/standard/testsuite || status=1
 page dpans-core     http://lars.nocrew.org/dpans/dpans6.htm || status=1
 page sicp           https://mitp-content-server.mit.edu/books/content/sectbyfn/books_pres_0/6515/sicp.zip/index.html || status=1
-page cheney-1970    https://doi.org/10.1145/362790.362798 || status=1
 exit "$status"
 #+end_src
 

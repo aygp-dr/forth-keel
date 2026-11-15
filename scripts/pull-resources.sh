@@ -12,7 +12,7 @@ pin() {  # key url commit
   echo "git  $1 @ $(git -C "$dest/$1" rev-parse --short HEAD)"
 }
 page() {  # key url
-  if curl -fsSL --max-time 60 -o "$dest/$1.html" "$2"; then echo "web  $1 ($(wc -c < "$dest/$1.html") bytes)"
+  if curl -fsSL --max-time 180 -o "$dest/$1.html" "$2"; then echo "web  $1 ($(wc -c < "$dest/$1.html") bytes)"
   else rm -f "$dest/$1.html"; echo "web  $1 FAILED: $2" >&2; return 1; fi
 }
 status=0
@@ -26,5 +26,4 @@ pin forsm           https://github.com/SupernaviX/forsm                712aad95b
 page forth-2012-testsuite-annex https://forth-standard.org/standard/testsuite || status=1
 page dpans-core     http://lars.nocrew.org/dpans/dpans6.htm || status=1
 page sicp           https://mitp-content-server.mit.edu/books/content/sectbyfn/books_pres_0/6515/sicp.zip/index.html || status=1
-page cheney-1970    https://doi.org/10.1145/362790.362798 || status=1
 exit "$status"
