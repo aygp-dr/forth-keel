@@ -292,7 +292,7 @@ stateDiagram-v2
 flowchart LR
   root["forth-keel/"]
   root --> spec["spec.org (governs)"]
-  root --> derived["README.md AGENTS.md CLAUDE.md (tangled)"]
+  root --> derived["README.org AGENTS.md CLAUDE.md (tangled)"]
   root --> docs["docs/ architecture.md, diagrams/, review-ledger.org"]
   root --> keel["keel/ (M2)"]
   root --> frames["frames/ (M3)"]

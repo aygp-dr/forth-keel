@@ -1,0 +1,71 @@
+# Derived from spec.org @ v0.1. The spec governs; if this file disagrees with it, this file is the bug. Do not add facts here that are not in the spec — add them to the spec first.
+#+TITLE: forth-keel
+#+STARTUP: showall
+
+[[https://img.shields.io/badge/spec-v0.1-blue.svg]]
+[[https://img.shields.io/badge/oracle-gforth%200.7.3-blue.svg]]
+[[https://img.shields.io/badge/sea--trials-29%2F29-brightgreen.svg]]
+[[https://img.shields.io/badge/experiments-510%20checks-brightgreen.svg]]
+[[https://img.shields.io/badge/gates-test%20%7C%20docs%20%7C%20tangle--check-informational.svg]]
+
+A Forth system built in three layers, each written on top of the one
+below, and tested against a fixed oracle corpus of SICP programs. A
+layer uses only the layer below it and its own earlier definitions.
+
+* Layers
+
+| Layer    | Written in              | Contents                                                            |
+|----------+-------------------------+---------------------------------------------------------------------|
+| keel     | host language (Rust, C) | 13 primitives and the inner interpreter                             |
+| frames   | Forth                   | stack words, arithmetic, control flow, compiler, outer interpreter  |
+| planking | Forth                   | tagged cells, pairs, symbols, closures, promises, Cheney GC, reader |
+
+The keel provides exactly =@ ! sp@ rp@ 0= + nand exit key emit execute
+um* um/mod=. =nand= is the only logical primitive: =invert=, =and=, =or=
+and =negate= are all derived from it in Forth. =sp@= yields the address
+holding the former top of stack, which is what makes =dup= definable as
+=sp@ @=. Cells are at least 32 bits and the corpus assumes no more than
+32, so results match on a 32-bit host.
+
+* Build sequence
+
+| Milestone | Delivers                                                  |
+|-----------+-----------------------------------------------------------|
+| M0        | the oracle: =sea-trials/= and its runner (done)            |
+| M1        | frames data words on gforth, experiment 001 (done)         |
+| M2        | native keel: 13 primitives and NEXT                        |
+| M3        | frames complete on the native keel: sea-trials layer 0      |
+| M4        | keel to wasm32 plus a node runner: layer 0                 |
+| M4b       | WAForth host via node: a layer-0 baseline                  |
+| M5        | a ClojureScript application loads the wasm keel             |
+| M6        | planking: cells, pairs, symbols, experiment 002 onward      |
+| M7        | closures, =apply=, =delay= / =force=                        |
+| M8        | Cheney garbage collection                                   |
+| M9        | the reader and the metacircular evaluator (SICP 4.1)        |
+
+* Gates
+
+Every gate must come back with zero findings; there is no warning tier.
+
+- =gmake test= — experiments and the sea-trials on gforth
+- =gmake docs= — the docs gate, including its negative fixtures
+- =gmake tangle= — regenerate the derived files from [[file:spec.org][spec.org]]
+- =gmake tangle-check= — confirm the derived files match the spec
+- =gmake all= — all of the above
+
+On FreeBSD use =gmake=: these makefiles need GNU make. The gates also
+need bash, gforth 0.7.3, Emacs, Python 3, and node for the Mermaid
+check; =gmake tools= installs the pinned Mermaid parser.
+
+* Where things are
+
+- [[file:spec.org][spec.org]] — the governing specification: 23 requirements, each with
+  the test that decides it and a label saying whether it is observed or
+  still a hypothesis
+- [[file:AGENTS.md][AGENTS.md]] — the working rules, for humans and agents alike
+- [[file:docs/architecture.md][docs/architecture.md]] — all twelve diagrams, rendered
+- [[file:sea-trials/README.org][sea-trials/]] — the oracle corpus: 29 programs whose expected output
+  comes from gforth 0.7.3
+- [[file:experiments/README.md][experiments/]] — each conjecture with its falsification criteria
+- [[file:docs/review-ledger.org][docs/review-ledger.org]] — deviations declared so far, to reconcile at
+  spec v0.2

@@ -3,7 +3,7 @@
 #+PROPERTY: header-args :mkdirp t
 #+STARTUP: showall
 
-This file governs the repository. =README.md=, =AGENTS.md=, =CLAUDE.md=,
+This file governs the repository. =README.org=, =AGENTS.md=, =CLAUDE.md=,
 =docs/architecture.md=, =docs/diagrams/*.mmd=, =resources/README.md= and
 =scripts/pull-resources.sh= are tangled from it (=make tangle=). When a
 derived file disagrees with this file, the derived file is the bug.
@@ -428,7 +428,7 @@ stateDiagram-v2
 flowchart LR
   root["forth-keel/"]
   root --> spec["spec.org (governs)"]
-  root --> derived["README.md AGENTS.md CLAUDE.md (tangled)"]
+  root --> derived["README.org AGENTS.md CLAUDE.md (tangled)"]
   root --> docs["docs/ architecture.md, diagrams/, review-ledger.org"]
   root --> keel["keel/ (M2)"]
   root --> frames["frames/ (M3)"]
@@ -568,7 +568,9 @@ Docs-gate checks: =spec-sections=, =links=, =falsification=, =labels=,
 (must pass) and on one fixture per check (each must fail with exactly
 its own check name); =gates/fixtures/build.py= regenerates the fixtures.
 The =derived-header= check exempts =*.mmd= files, because their text is
-included verbatim inside =docs/architecture.md= and =README.md=.
+included verbatim inside =docs/architecture.md=. =README.org= links to
+that file rather than embedding the diagrams, because GitHub renders
+Mermaid in Markdown but not in Org.
 
 The code gate also runs =sea-trials/run.sh --lint=, the runner negative
 test (=make trials-negative=) and =tools/forthfmt.py --check= on every
@@ -596,40 +598,78 @@ Deviations declared while establishing the project are recorded in
 
 * Derived files
 
-#+begin_src markdown :tangle README.md :noweb yes
-> Derived from spec.org @ v0.1. The spec governs; if this file disagrees with it, this file is the bug. Do not add facts here that are not in the spec — add them to the spec first.
+#+begin_src org :tangle README.org
+# Derived from spec.org @ v0.1. The spec governs; if this file disagrees with it, this file is the bug. Do not add facts here that are not in the spec — add them to the spec first.
+,#+TITLE: forth-keel
+,#+STARTUP: showall
 
-# forth-keel
+[[https://img.shields.io/badge/spec-v0.1-blue.svg]]
+[[https://img.shields.io/badge/oracle-gforth%200.7.3-blue.svg]]
+[[https://img.shields.io/badge/sea--trials-29%2F29-brightgreen.svg]]
+[[https://img.shields.io/badge/experiments-510%20checks-brightgreen.svg]]
+[[https://img.shields.io/badge/gates-test%20%7C%20docs%20%7C%20tangle--check-informational.svg]]
 
 A Forth system built in three layers, each written on top of the one
-below, and tested against a fixed oracle corpus of SICP programs.
+below, and tested against a fixed oracle corpus of SICP programs. A
+layer uses only the layer below it and its own earlier definitions.
 
-| Layer    | Written in | Contents |
-|----------|------------|----------|
-| keel     | host language (Rust, C) | 13 primitives and the inner interpreter |
-| frames   | Forth | stack words, arithmetic, control flow, compiler, outer interpreter |
-| planking | Forth | tagged cells, pairs, symbols, closures, promises, Cheney GC, reader |
+,* Layers
 
-```mermaid
-<<d-kernel-levels>>
-```
+| Layer    | Written in              | Contents                                                            |
+|----------+-------------------------+---------------------------------------------------------------------|
+| keel     | host language (Rust, C) | 13 primitives and the inner interpreter                             |
+| frames   | Forth                   | stack words, arithmetic, control flow, compiler, outer interpreter  |
+| planking | Forth                   | tagged cells, pairs, symbols, closures, promises, Cheney GC, reader |
 
-## Build sequence
+The keel provides exactly =@ ! sp@ rp@ 0= + nand exit key emit execute
+um* um/mod=. =nand= is the only logical primitive: =invert=, =and=, =or=
+and =negate= are all derived from it in Forth. =sp@= yields the address
+holding the former top of stack, which is what makes =dup= definable as
+=sp@ @=. Cells are at least 32 bits and the corpus assumes no more than
+32, so results match on a 32-bit host.
 
-```mermaid
-<<d-build-sequence>>
-```
+,* Build sequence
 
-## Commands
+| Milestone | Delivers                                                  |
+|-----------+-----------------------------------------------------------|
+| M0        | the oracle: =sea-trials/= and its runner (done)            |
+| M1        | frames data words on gforth, experiment 001 (done)         |
+| M2        | native keel: 13 primitives and NEXT                        |
+| M3        | frames complete on the native keel: sea-trials layer 0      |
+| M4        | keel to wasm32 plus a node runner: layer 0                 |
+| M4b       | WAForth host via node: a layer-0 baseline                  |
+| M5        | a ClojureScript application loads the wasm keel             |
+| M6        | planking: cells, pairs, symbols, experiment 002 onward      |
+| M7        | closures, =apply=, =delay= / =force=                        |
+| M8        | Cheney garbage collection                                   |
+| M9        | the reader and the metacircular evaluator (SICP 4.1)        |
 
-- `make test` — code gate: experiments and sea-trials on gforth
-- `make docs` — docs gate, including negative fixtures
-- `make tangle` — regenerate derived files from `spec.org`
-- `make tangle-check` — confirm derived files match `spec.org`
-- `scripts/pull-resources.sh` — fetch reference sources into `resources/vendor/`
+,* Gates
 
-All diagrams: [docs/architecture.md](docs/architecture.md).
-Governing spec: [spec.org](spec.org).
+Every gate must come back with zero findings; there is no warning tier.
+
+- =gmake test= — experiments and the sea-trials on gforth
+- =gmake docs= — the docs gate, including its negative fixtures
+- =gmake tangle= — regenerate the derived files from [[file:spec.org][spec.org]]
+- =gmake tangle-check= — confirm the derived files match the spec
+- =gmake all= — all of the above
+
+On FreeBSD use =gmake=: these makefiles need GNU make. The gates also
+need bash, gforth 0.7.3, Emacs, Python 3, and node for the Mermaid
+check; =gmake tools= installs the pinned Mermaid parser.
+
+,* Where things are
+
+- [[file:spec.org][spec.org]] — the governing specification: 23 requirements, each with
+  the test that decides it and a label saying whether it is observed or
+  still a hypothesis
+- [[file:AGENTS.md][AGENTS.md]] — the working rules, for humans and agents alike
+- [[file:docs/architecture.md][docs/architecture.md]] — all twelve diagrams, rendered
+- [[file:sea-trials/README.org][sea-trials/]] — the oracle corpus: 29 programs whose expected output
+  comes from gforth 0.7.3
+- [[file:experiments/README.md][experiments/]] — each conjecture with its falsification criteria
+- [[file:docs/review-ledger.org][docs/review-ledger.org]] — deviations declared so far, to reconcile at
+  spec v0.2
 #+end_src
 
 #+begin_src markdown :tangle docs/architecture.md :noweb yes
