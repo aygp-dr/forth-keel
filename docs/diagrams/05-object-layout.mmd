@@ -1,0 +1,34 @@
+classDiagram
+  class Cell {
+    low bit 0: fixnum n*2
+    low bit 1: object addr+1
+  }
+  class Pair {
+    header = t-pair
+    car : Cell
+    cdr : Cell
+  }
+  class Symbol {
+    header = t-symbol
+    length
+    chars
+  }
+  class Closure {
+    header = t-closure
+    xt
+    env : Cell
+  }
+  class Promise {
+    header = t-promise
+    forced flag
+    thunk or value : Cell
+  }
+  class Forward {
+    header = t-forward
+    new address
+  }
+  Cell --> Pair
+  Cell --> Symbol
+  Cell --> Closure
+  Cell --> Promise
+  Pair ..> Forward : during GC

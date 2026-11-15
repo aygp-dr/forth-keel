@@ -1,0 +1,17 @@
+stateDiagram-v2
+  [*] --> ReadToken
+  ReadToken --> Lookup: token parsed
+  ReadToken --> Refill: input empty
+  Refill --> ReadToken: line read
+  Refill --> [*]: end of input
+  Lookup --> Execute: found, state=0 or immediate
+  Lookup --> Compile: found, state=1, not immediate
+  Lookup --> Number: not found
+  Number --> PushLiteral: parsed, state=0
+  Number --> CompileLiteral: parsed, state=1
+  Number --> Error: not a number
+  Execute --> ReadToken
+  Compile --> ReadToken
+  PushLiteral --> ReadToken
+  CompileLiteral --> ReadToken
+  Error --> ReadToken: reset stacks, state=0

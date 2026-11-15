@@ -1,0 +1,17 @@
+sequenceDiagram
+  participant M as mutator
+  participant A as allocator
+  participant C as collector
+  participant T as to-space
+  M->>A: cons (needs 3 cells)
+  A->>A: free + 3 > limit?
+  A->>C: collect
+  C->>C: swap from-space and to-space
+  loop each root (data stack, return stack, globals)
+    C->>T: copy object, leave forward in from-space
+  end
+  loop scan < free
+    C->>T: for each field: copy referent or follow forward
+  end
+  C-->>A: free pointer reset to end of copied data
+  A-->>M: new pair

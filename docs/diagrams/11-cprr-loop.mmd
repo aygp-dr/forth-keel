@@ -1,0 +1,9 @@
+stateDiagram-v2
+  [*] --> Conjecture: CONJECTURE.md with falsification criteria
+  Conjecture --> Proof: make test passes in the experiment dir
+  Proof --> Refutation: adversarial inputs, 2+ evidence entries
+  Refutation --> Refinement: SURVIVED
+  Refutation --> NewConjecture: REFUTED, file next number
+  NewConjecture --> Conjecture
+  Refinement --> Layer: moved into keel/ frames/ planking/ + ADR
+  Layer --> [*]: sea-trials layer passes

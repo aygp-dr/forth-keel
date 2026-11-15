@@ -1,0 +1,34 @@
+flowchart BT
+  subgraph K["keel (host language, ~13 primitives)"]
+    direction LR
+    k1["@  !  sp@  rp@"]
+    k2["0=  +  nand"]
+    k3["exit  execute"]
+    k4["key  emit"]
+    k5["um*  um/mod"]
+  end
+  subgraph F["frames (Forth, ~150 lines)"]
+    direction LR
+    f1["stack: dup drop swap over rot"]
+    f2["arith/logic: invert and or negate - * / mod"]
+    f3["control: branch ?branch lit if then begin while repeat do loop"]
+    f4["compiler: : ; create , here immediate"]
+    f5["outer interpreter: parse find number"]
+  end
+  subgraph P["planking (Forth, ~300 lines)"]
+    direction LR
+    p1["tagged cells"]
+    p2["pairs: cons car cdr"]
+    p3["symbols: intern eq?"]
+    p4["closures + apply"]
+    p5["delay / force"]
+    p6["Cheney GC"]
+    p7["reader"]
+  end
+  subgraph S["SICP programs (sea-trials 200-499)"]
+    s1["ch1: procedures, recursion, higher-order"]
+    s2["ch2: data abstraction, lists"]
+    s3["ch3: state, streams"]
+    s4["ch4: metacircular evaluator"]
+  end
+  K --> F --> P --> S

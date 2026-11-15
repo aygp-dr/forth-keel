@@ -1,0 +1,14 @@
+flowchart LR
+  subgraph L0["layer 0 (000-090, 110, 210-300, 320-330): 22 tests"]
+    t0["stack, arith, logic, memory, control, xt, does>, base"]
+    t1["SICP ch1-3 programs on fixed pools"]
+  end
+  subgraph L1["layer 1 (400-499, to be written)"]
+    t2["cells, pairs, symbols, closures, promises, GC, reader"]
+  end
+  subgraph LX["layer x (100, 120-150, 200, 310): 7 tests"]
+    t3["strings, exceptions, floats, heap, locals"]
+  end
+  L0 -->|gates| M3["M3, M4, M4b"]
+  L1 -->|gates| M6["M6-M9"]
+  LX -->|reported, never gates| R["runner summary"]

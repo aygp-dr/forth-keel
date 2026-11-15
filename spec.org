@@ -1,0 +1,722 @@
+#+TITLE: forth-keel — governing specification
+#+SUBTITLE: v0.1, 2026-11-15
+#+PROPERTY: header-args :mkdirp t
+#+STARTUP: showall
+
+This file governs the repository. =README.md=, =AGENTS.md=, =CLAUDE.md=,
+=docs/architecture.md=, =docs/diagrams/*.mmd=, =resources/README.md= and
+=scripts/pull-resources.sh= are tangled from it (=make tangle=). When a
+derived file disagrees with this file, the derived file is the bug.
+
+Epistemic labels: =[E]= observed in this repository, =[P]= taken from a
+cited source, =[H]= hypothesis to be tested, =[I]= author inference.
+
+* Scope
+
+forth-keel builds a Forth system in three layers, each written on top of
+the one below, and tests every layer against a fixed oracle corpus:
+
+| Layer   | Directory    | Written in             | Contents                                             |
+|---------+--------------+------------------------+------------------------------------------------------|
+| keel    | =keel/=      | host language (Rust, C) | 13 primitives and the inner interpreter              |
+| frames  | =frames/=    | Forth                  | stack words, arithmetic, control flow, compiler, outer interpreter |
+| planking| =planking/=  | Forth                  | tagged cells, pairs, symbols, closures, promises, Cheney GC, reader |
+
+The SICP programs in =sea-trials/= are the acceptance tests. The browser
+host loads a WebAssembly build of the keel into a ClojureScript
+application.
+
+** Non-goals
+
+- Forth-2012 conformance. The Forth-2012 test suite is a reference
+  resource, not a gate. [I]
+- Floating point, the BLOCK wordset, and multitasking. Tests that need
+  them carry =\ layer: x= and stay outside the layered build. [I]
+- Performance beyond running the sea-trials within the runner's
+  20-second timeout per test. [I]
+- SICP 3.4 (concurrency). [I]
+
+* Survey and names
+
+Inputs: the design conversation of 2026-11-14/15 (Forth translations
+of SICP 1.1–3.1, the layered-kernel proposal, the WASM/Rust/ClojureScript
+host discussion) and =forth-oracle-corpus.tar.gz=, which becomes
+=sea-trials/=. The GitHub repository =aygp-dr/forth-keel= did not exist
+when this spec was written, so there was no prior code to reuse. [E]
+
+| Name         | Meaning in this repository                                    |
+|--------------+---------------------------------------------------------------|
+| keel         | the host-language layer: 13 primitives + inner interpreter    |
+| frames       | the Forth layer that defines the standard words from the keel |
+| planking     | the Forth layer that defines the SICP runtime                 |
+| sea-trials   | the oracle corpus and its runner                              |
+| host         | one keel implementation plus its loader (gforth, Rust native, WASM, WAForth) |
+| cell         | (host, platform) pair a result was observed on                |
+
+Prior art read for the design ([P], sources in [[*Resources]]):
+sectorforth (8 primitives + 2 I/O), eForth (31 primitives), Minimal
+Forth (48 primitives, 69 words), JonesForth (annotated x86 Forth),
+WAForth (Forth compiling to WebAssembly), forsm (Rust-bootstrapped WASI
+Forth), and the Forth-2012 test suite (Hayes/Jackson =tester.fr=).
+
+* Architecture
+
+** Kernel levels
+
+Each layer may call only the layer directly below it and its own
+earlier definitions. The keel is the only code that changes between
+hosts. [H]
+
+#+name: d-kernel-levels
+#+begin_src mermaid :tangle docs/diagrams/01-kernel-levels.mmd
+flowchart BT
+  subgraph K["keel (host language, ~13 primitives)"]
+    direction LR
+    k1["@  !  sp@  rp@"]
+    k2["0=  +  nand"]
+    k3["exit  execute"]
+    k4["key  emit"]
+    k5["um*  um/mod"]
+  end
+  subgraph F["frames (Forth, ~150 lines)"]
+    direction LR
+    f1["stack: dup drop swap over rot"]
+    f2["arith/logic: invert and or negate - * / mod"]
+    f3["control: branch ?branch lit if then begin while repeat do loop"]
+    f4["compiler: : ; create , here immediate"]
+    f5["outer interpreter: parse find number"]
+  end
+  subgraph P["planking (Forth, ~300 lines)"]
+    direction LR
+    p1["tagged cells"]
+    p2["pairs: cons car cdr"]
+    p3["symbols: intern eq?"]
+    p4["closures + apply"]
+    p5["delay / force"]
+    p6["Cheney GC"]
+    p7["reader"]
+  end
+  subgraph S["SICP programs (sea-trials 200-499)"]
+    s1["ch1: procedures, recursion, higher-order"]
+    s2["ch2: data abstraction, lists"]
+    s3["ch3: state, streams"]
+    s4["ch4: metacircular evaluator"]
+  end
+  K --> F --> P --> S
+#+end_src
+
+** Primitive derivation
+
+Frames words are derived from the keel in dependency order. The arrows
+show which earlier words each definition uses. [E] for the words marked
+in experiment 001; [H] for the rest.
+
+#+name: d-primitive-derivation
+#+begin_src mermaid :tangle docs/diagrams/02-primitive-derivation.mmd
+flowchart LR
+  fetch["@"] --> dup
+  spat["sp@"] --> dup
+  nand --> invert
+  dup --> invert
+  invert --> and_["and"]
+  nand --> and_
+  invert --> negate
+  plus["+"] --> negate
+  negate --> minus["-"]
+  plus --> minus
+  spat --> cell
+  minus --> cell
+  dup --> drop
+  minus --> drop
+  plus --> drop
+  spat --> over
+  cell --> over
+  fetch --> over
+  over --> swap
+  store["!"] --> swap
+  cell --> swap
+  swap --> or_["or"]
+  invert --> or_
+  and_ --> or_
+  rpat["rp@"] --> tor[">r  r>"]
+  swap --> tor
+  rpat --> branch["branch  ?branch  lit"]
+  zeq["0="] --> branch
+  branch --> ifthen["if then begin while repeat"]
+  tor --> rot
+  swap --> rot
+  umstar["um*"] --> star["*"]
+  umslash["um/mod"] --> divmod["/  mod  /mod"]
+#+end_src
+
+** Memory map
+
+One linear, byte-addressed memory. Region boundaries are host
+constants; every region is cell-aligned. The heap is split into two
+semispaces for the copying collector. [H]
+
+#+name: d-memory-map
+#+begin_src mermaid :tangle docs/diagrams/03-memory-map.mmd
+flowchart LR
+  subgraph MEM["linear memory (low address to high)"]
+    direction LR
+    sys["system variables: here latest state base hp"]
+    tib["terminal input buffer"]
+    dict["dictionary: headers + threaded code, grows up"]
+    from["heap semispace A (from-space)"]
+    to["heap semispace B (to-space)"]
+    ds["data stack, grows down"]
+    rs["return stack, grows down"]
+  end
+  sys --- tib --- dict --- from --- to --- ds --- rs
+#+end_src
+
+** Inner and outer interpreter
+
+The keel runs threaded code (=NEXT=). Frames implement the outer
+interpreter, which switches between interpreting and compiling on
+=state=. [P] (standard Forth model)
+
+#+name: d-interpreter-states
+#+begin_src mermaid :tangle docs/diagrams/04-interpreter-states.mmd
+stateDiagram-v2
+  [*] --> ReadToken
+  ReadToken --> Lookup: token parsed
+  ReadToken --> Refill: input empty
+  Refill --> ReadToken: line read
+  Refill --> [*]: end of input
+  Lookup --> Execute: found, state=0 or immediate
+  Lookup --> Compile: found, state=1, not immediate
+  Lookup --> Number: not found
+  Number --> PushLiteral: parsed, state=0
+  Number --> CompileLiteral: parsed, state=1
+  Number --> Error: not a number
+  Execute --> ReadToken
+  Compile --> ReadToken
+  PushLiteral --> ReadToken
+  CompileLiteral --> ReadToken
+  Error --> ReadToken: reset stacks, state=0
+#+end_src
+
+** Object layout (planking)
+
+A cell with low bit 0 is a fixnum (value shifted left by one). A cell
+with low bit 1 is an object reference (address + 1); the object's first
+cell is a type header. During collection, a from-space object is
+overwritten with a forwarding header. [E] for fixnum and pair in
+experiment 002; [H] for the rest.
+
+#+name: d-object-layout
+#+begin_src mermaid :tangle docs/diagrams/05-object-layout.mmd
+classDiagram
+  class Cell {
+    low bit 0: fixnum n*2
+    low bit 1: object addr+1
+  }
+  class Pair {
+    header = t-pair
+    car : Cell
+    cdr : Cell
+  }
+  class Symbol {
+    header = t-symbol
+    length
+    chars
+  }
+  class Closure {
+    header = t-closure
+    xt
+    env : Cell
+  }
+  class Promise {
+    header = t-promise
+    forced flag
+    thunk or value : Cell
+  }
+  class Forward {
+    header = t-forward
+    new address
+  }
+  Cell --> Pair
+  Cell --> Symbol
+  Cell --> Closure
+  Cell --> Promise
+  Pair ..> Forward : during GC
+#+end_src
+
+** Garbage collection
+
+Cheney's algorithm: copy the roots, then scan to-space with one pointer
+while another marks the end of copied data. The scan finishes when the
+two pointers meet. Roots are the data stack, the return stack, and
+global cells registered with =root,=. [P] (Cheney 1970; SICP 5.3.2)
+
+#+name: d-cheney-gc
+#+begin_src mermaid :tangle docs/diagrams/06-cheney-gc.mmd
+sequenceDiagram
+  participant M as mutator
+  participant A as allocator
+  participant C as collector
+  participant T as to-space
+  M->>A: cons (needs 3 cells)
+  A->>A: free + 3 > limit?
+  A->>C: collect
+  C->>C: swap from-space and to-space
+  loop each root (data stack, return stack, globals)
+    C->>T: copy object, leave forward in from-space
+  end
+  loop scan < free
+    C->>T: for each field: copy referent or follow forward
+  end
+  C-->>A: free pointer reset to end of copied data
+  A-->>M: new pair
+#+end_src
+
+** System context
+
+One frames + planking source tree runs on every host. The browser host
+is a WebAssembly keel loaded by a ClojureScript application. [H]
+
+#+name: d-system-context
+#+begin_src mermaid :tangle docs/diagrams/07-system-context.mmd
+flowchart TB
+  subgraph SRC["Forth source (identical on every host)"]
+    frames["frames/*.fs"]
+    planking["planking/*.fs"]
+  end
+  subgraph HOSTS["hosts"]
+    gforth["gforth 0.7.3 (reference oracle)"]
+    rsnative["keel-rs native (cargo test)"]
+    rswasm["keel-rs wasm32 (wasm-bindgen)"]
+    waforth["WAForth (comparison host)"]
+  end
+  subgraph WEB["browser"]
+    cljs["ClojureScript app (shadow-cljs)"]
+    ui["REPL, stack view, dictionary view"]
+  end
+  trials["sea-trials runner"]
+  SRC --> rsnative
+  SRC --> rswasm
+  rswasm --> cljs
+  waforth --> cljs
+  cljs --> ui
+  gforth -->|generates .out| trials
+  rsnative -->|checked by| trials
+  rswasm -->|checked by, via node| trials
+  waforth -->|checked by, via node| trials
+#+end_src
+
+** ClojureScript interop
+
+The WASM keel exports a small API; output is returned as a string per
+call so no callbacks cross the boundary. [H]
+
+#+name: d-cljs-interop
+#+begin_src mermaid :tangle docs/diagrams/08-cljs-interop.mmd
+sequenceDiagram
+  participant U as user
+  participant C as ClojureScript
+  participant J as wasm-bindgen glue
+  participant K as keel (wasm)
+  C->>J: dynamic-import /pkg/keel.js
+  J->>K: instantiate keel_bg.wasm
+  C->>K: new Forth() (loads frames + planking)
+  U->>C: types "10 4 cc ."
+  C->>K: interpret(src)
+  K-->>C: Ok("292 ")
+  C->>K: stack()
+  K-->>C: [ ]
+  C-->>U: render output, stack, dictionary
+#+end_src
+
+* Build sequence
+
+Each milestone ends when its sea-trials layer passes on its host. A
+milestone may start only when the milestones it depends on are
+done. [I]
+
+#+name: d-build-sequence
+#+begin_src mermaid :tangle docs/diagrams/09-build-sequence.mmd
+flowchart TD
+  M0["M0 oracle: sea-trials + runner (done)"]
+  M1["M1 frames data words on gforth, exp 001 (done)"]
+  M2["M2 keel-rs native: 13 primitives + NEXT"]
+  M3["M3 frames complete on keel-rs: sea-trials layer 0"]
+  M4["M4 keel-rs to wasm32 + node runner: layer 0"]
+  M4b["M4b WAForth host via node: layer 0 baseline"]
+  M5["M5 ClojureScript app loads the wasm keel"]
+  M6["M6 planking cells, pairs, symbols, exp 002 onward"]
+  M7["M7 closures, apply, delay/force"]
+  M8["M8 Cheney GC"]
+  M9["M9 reader + metacircular evaluator (SICP 4.1)"]
+  M0 --> M1 --> M2 --> M3 --> M4 --> M5
+  M0 --> M4b --> M5
+  M3 --> M6 --> M7 --> M8 --> M9
+  M4 --> M9
+#+end_src
+
+** Gating by sea-trials layer
+
+#+name: d-test-gating
+#+begin_src mermaid :tangle docs/diagrams/10-test-gating.mmd
+flowchart LR
+  subgraph L0["layer 0 (000-090, 110, 210-300, 320-330): 22 tests"]
+    t0["stack, arith, logic, memory, control, xt, does>, base"]
+    t1["SICP ch1-3 programs on fixed pools"]
+  end
+  subgraph L1["layer 1 (400-499, to be written)"]
+    t2["cells, pairs, symbols, closures, promises, GC, reader"]
+  end
+  subgraph LX["layer x (100, 120-150, 200, 310): 7 tests"]
+    t3["strings, exceptions, floats, heap, locals"]
+  end
+  L0 -->|gates| M3["M3, M4, M4b"]
+  L1 -->|gates| M6["M6-M9"]
+  LX -->|reported, never gates| R["runner summary"]
+#+end_src
+
+** Incremental development loop
+
+Every unit of new behaviour starts as a numbered experiment and moves
+through conjecture, proof, refutation and refinement before it reaches
+=keel/=, =frames/= or =planking/=. [P] (experiment-driven development)
+
+#+name: d-cprr-loop
+#+begin_src mermaid :tangle docs/diagrams/11-cprr-loop.mmd
+stateDiagram-v2
+  [*] --> Conjecture: CONJECTURE.md with falsification criteria
+  Conjecture --> Proof: make test passes in the experiment dir
+  Proof --> Refutation: adversarial inputs, 2+ evidence entries
+  Refutation --> Refinement: SURVIVED
+  Refutation --> NewConjecture: REFUTED, file next number
+  NewConjecture --> Conjecture
+  Refinement --> Layer: moved into keel/ frames/ planking/ + ADR
+  Layer --> [*]: sea-trials layer passes
+#+end_src
+
+** Repository layout
+
+#+name: d-repo-layout
+#+begin_src mermaid :tangle docs/diagrams/12-repo-layout.mmd
+flowchart LR
+  root["forth-keel/"]
+  root --> spec["spec.org (governs)"]
+  root --> derived["README.md AGENTS.md CLAUDE.md (tangled)"]
+  root --> docs["docs/ architecture.md, diagrams/, review-ledger.org"]
+  root --> keel["keel/ (M2)"]
+  root --> frames["frames/ (M3)"]
+  root --> planking["planking/ (M6)"]
+  root --> trials["sea-trials/ tests/*.fs, *.out, run.sh"]
+  root --> exps["experiments/ 000-quickstart 001 002"]
+  root --> gates["gates/ docs-gate.sh, tangle-check.sh, fixtures/"]
+  root --> tools["tools/ forthfmt.py, mmcheck.mjs"]
+  root --> res["resources/ README.md, vendor/ (pulled, untracked)"]
+#+end_src
+
+* Requirements
+
+| ID      | Statement                                                                 | Oracle                                              | Label |
+|---------+---------------------------------------------------------------------------+-----------------------------------------------------+-------|
+| R-K-01  | The keel provides exactly =@ ! sp@ rp@ 0= + nand exit key emit execute um* um/mod=. | per-primitive vectors in =keel/= tests (M2)         | [H]   |
+| R-K-02  | Every host runs the same =frames/= and =planking/= source unchanged.      | sea-trials layer 0 and 1 on each host               | [H]   |
+| R-K-03  | Cells are at least 32 bits; the sea-trials assume no more than 32.        | sea-trials on a 32-bit host (WAForth, wasm32)       | [H]   |
+| R-K-04  | Memory is one linear byte-addressed region laid out as in the memory map. | keel-rs unit test of region boundaries (M2)         | [H]   |
+| R-F-01  | Frames data words are defined from keel primitives only.                  | =experiments/001-frames-from-nand= (wordlist isolation) | [E] |
+| R-F-02  | Frames control flow and compiler words are defined from keel primitives only. | wordlist isolation on keel-rs (M3)              | [H]   |
+| R-F-03  | Frames pass every layer-0 sea-trial.                                      | =sea-trials/run.sh --layer 0=                       | [H]   |
+| R-P-01  | A fixnum is n*2; an object reference is address+1 with a type header.     | =experiments/002-tagged-cells=                      | [E]   |
+| R-P-02  | =cons car cdr pair?= operate on heap objects.                             | =experiments/002-tagged-cells=                      | [E]   |
+| R-P-03  | Symbols are interned, so =eq?= on symbols is =\==.                        | experiment 003 (planned)                            | [H]   |
+| R-P-04  | A closure is an object holding an xt and an environment; =apply= runs it. | experiment 004 (planned)                           | [H]   |
+| R-P-05  | =delay= builds a memoizing promise; =force= evaluates it at most once.    | experiment 005 (planned)                            | [H]   |
+| R-P-06  | Cheney GC reclaims unreachable objects and preserves reachable ones.      | allocate 10x the heap size in a loop, then walk a live list (exp 006, planned) | [H] |
+| R-P-07  | The reader turns s-expression text into cells.                            | experiment 007 (planned)                            | [H]   |
+| R-T-01  | Every sea-trial begins with =\ requires:= and =\ layer:= lines.           | =sea-trials/run.sh --lint=                          | [E]   |
+| R-T-02  | Every =.out= file was produced by gforth 0.7.3 and checked by hand.       | review at creation (corpus README)                  | [E]   |
+| R-T-03  | No sea-trial prints a value outside 32-bit signed range, an address, or raw =f.= output. | review at creation; 32-bit host run       | [I]   |
+| R-T-04  | The runner exits non-zero when any selected test fails, and reports pass counts per layer. | =make trials-negative= (corrupts one =.out=, expects exit 1) | [E] |
+| R-H-01  | gforth 0.7.3 is the reference host that generates =.out= files.          | =sea-trials/run.sh= on gforth passes                | [E]   |
+| R-H-02  | The wasm keel exports =new=, =interpret= (returns output), =push=, =pop=, =stack=. | node test calling each export (M4)          | [H]   |
+| R-H-03  | The ClojureScript app loads the wasm keel with =shadow.esm/dynamic-import=. | browser smoke test (M5)                           | [H]   |
+| R-D-01  | Derived files are tangled from this spec and start with the derived-file header. | docs gate =derived-header= + =make tangle-check= | [E] |
+| R-D-02  | Every Mermaid diagram in the repository parses.                           | docs gate =mermaid=                                 | [E]   |
+
+* Experiments
+
+| #   | Name                 | Requirement      | Status                 |
+|-----+----------------------+------------------+------------------------|
+| 000 | quickstart           | R-H-01           | proof passes           |
+| 001 | frames-from-nand     | R-F-01           | proof passes           |
+| 002 | tagged-cells         | R-P-01, R-P-02   | proof passes           |
+| 003 | interned-symbols     | R-P-03           | planned                |
+| 004 | closures-apply       | R-P-04           | planned                |
+| 005 | delay-force          | R-P-05           | planned                |
+| 006 | cheney-gc            | R-P-06           | planned                |
+| 007 | reader               | R-P-07           | planned                |
+
+* Resources
+
+Pulled by =scripts/pull-resources.sh= into =resources/vendor/= (not
+tracked). Git sources are pinned to the commit observed on 2026-11-15
+with =git ls-remote=. Web sources were confirmed with WebFetch on
+2026-11-15; this cell's shell could not reach them (proxy 403 or DNS
+failure), so the script must run on a cell with general web access. [E]
+
+| Key                | Source                                                                 | Pin / fetched           | Use |
+|--------------------+------------------------------------------------------------------------+-------------------------+-----|
+| forth2012-tests    | https://github.com/gerryjackson/forth2012-test-suite                   | 4c87e5659c5b79bd7a6664daa56603df080c6f9b | Hayes =tester.fr=, =core.fr=; reference for sea-trial coverage |
+| sectorforth        | https://github.com/cesarblum/sectorforth                               | 32031ac6e77e30817c2f65ba11b1ccda07d564f9 | 8-primitive model for keel and frames |
+| jonesforth         | https://github.com/nornagon/jonesforth                                 | d97a25bb0b06fb58da1975eac291f45618fd2ada | annotated threaded-code implementation |
+| eforth             | https://github.com/chochain/eforth                                     | b3a33b151ef6922bc7534ea5632eff3ceb016692 | 31-primitive model, C/C++ and WASM ports |
+| minimal-forth      | https://github.com/uho/minimal                                         | 0db6014472d7450e3750fabefaa116156ac6f708 | wordlist-isolation technique used in exp 001 |
+| waforth            | https://github.com/remko/waforth                                       | 280073c7722018f42a4e3fa37f4e123f7a236d94 | comparison host, JS embedding API |
+| forsm              | https://github.com/SupernaviX/forsm                                    | 712aad95b5c14554389d45e19e983da0d276632e | Rust-bootstrapped WASM Forth |
+| forth-2012-testsuite-annex | https://forth-standard.org/standard/testsuite                  | 2026-11-15              | Annex F: test harness and core tests |
+| dpans-core         | http://lars.nocrew.org/dpans/dpans6.htm                                | 2026-11-15              | 6.1 Core word glossary |
+| sicp               | https://mitp-content-server.mit.edu/books/content/sectbyfn/books_pres_0/6515/sicp.zip/index.html | 2026-11-15 | SICP 2nd ed., CC BY-SA 4.0 |
+| cheney-1970        | https://doi.org/10.1145/362790.362798                                  | 2026-11-15              | Cheney, CACM 13(11):677-678 |
+
+#+begin_src markdown :tangle resources/README.md
+> Derived from spec.org @ v0.1. The spec governs; if this file disagrees with it, this file is the bug. Do not add facts here that are not in the spec — add them to the spec first.
+
+# Resources
+
+Run `scripts/pull-resources.sh` on a machine with general web access.
+Git sources are cloned into `resources/vendor/<key>` at the commit pinned
+in `spec.org`; web pages are saved as `resources/vendor/<key>.html`.
+`resources/vendor/` is not tracked.
+
+The table of sources, pins, and uses is in `spec.org`, section Resources.
+#+end_src
+
+#+begin_src sh :tangle scripts/pull-resources.sh :shebang "#!/usr/bin/env bash"
+# Derived from spec.org @ v0.1. The spec governs; if this file disagrees with it, this file is the bug.
+# Pull reference sources into resources/vendor/. Idempotent: existing clones are re-pinned, pages re-fetched.
+set -euo pipefail
+cd "$(dirname "$0")/.."
+dest=resources/vendor
+mkdir -p "$dest"
+pin() {  # key url commit
+  if [ ! -d "$dest/$1/.git" ]; then git clone -q "$2" "$dest/$1"; fi
+  git -C "$dest/$1" fetch -q origin "$3" 2>/dev/null || git -C "$dest/$1" fetch -q origin
+  git -C "$dest/$1" -c advice.detachedHead=false checkout -q "$3"
+  echo "git  $1 @ $(git -C "$dest/$1" rev-parse --short HEAD)"
+}
+page() {  # key url
+  if curl -fsSL --max-time 60 -o "$dest/$1.html" "$2"; then echo "web  $1 ($(wc -c < "$dest/$1.html") bytes)"
+  else rm -f "$dest/$1.html"; echo "web  $1 FAILED: $2" >&2; return 1; fi
+}
+status=0
+pin forth2012-tests https://github.com/gerryjackson/forth2012-test-suite 4c87e5659c5b79bd7a6664daa56603df080c6f9b || status=1
+pin sectorforth     https://github.com/cesarblum/sectorforth           32031ac6e77e30817c2f65ba11b1ccda07d564f9 || status=1
+pin jonesforth      https://github.com/nornagon/jonesforth             d97a25bb0b06fb58da1975eac291f45618fd2ada || status=1
+pin eforth          https://github.com/chochain/eforth                 b3a33b151ef6922bc7534ea5632eff3ceb016692 || status=1
+pin minimal-forth   https://github.com/uho/minimal                     0db6014472d7450e3750fabefaa116156ac6f708 || status=1
+pin waforth         https://github.com/remko/waforth                   280073c7722018f42a4e3fa37f4e123f7a236d94 || status=1
+pin forsm           https://github.com/SupernaviX/forsm                712aad95b5c14554389d45e19e983da0d276632e || status=1
+page forth-2012-testsuite-annex https://forth-standard.org/standard/testsuite || status=1
+page dpans-core     http://lars.nocrew.org/dpans/dpans6.htm || status=1
+page sicp           https://mitp-content-server.mit.edu/books/content/sectbyfn/books_pres_0/6515/sicp.zip/index.html || status=1
+page cheney-1970    https://doi.org/10.1145/362790.362798 || status=1
+exit "$status"
+#+end_src
+
+#+begin_src gitignore :tangle .gitignore
+# Derived from spec.org @ v0.1. The spec governs; if this file disagrees with it, this file is the bug.
+resources/vendor/
+tools/node_modules/
+#+end_src
+
+* Gates
+
+| Gate         | Command                | Passes when                                            |
+|--------------+------------------------+--------------------------------------------------------|
+| code         | =make test=            | every experiment's =make test= and =sea-trials/run.sh= exit 0 |
+| docs         | =make docs=            | =gates/docs-gate.sh .= prints =docs-gate: PASS= and every fixture in =gates/fixtures/docs/= fails with its own check name |
+| tangle       | =make tangle-check=    | tangling this file into an empty directory reproduces every derived file byte for byte |
+
+Docs-gate checks: =spec-sections=, =links=, =falsification=, =labels=,
+=derived-header=, =req-refs=, =mermaid=. There is no warning tier.
+=gates/test-docs-gate.sh= runs the gate on =gates/fixtures/docs/_base=
+(must pass) and on one fixture per check (each must fail with exactly
+its own check name); =gates/fixtures/build.py= regenerates the fixtures.
+The =derived-header= check exempts =*.mmd= files, because their text is
+included verbatim inside =docs/architecture.md= and =README.md=.
+
+The code gate also runs =sea-trials/run.sh --lint=, the runner negative
+test (=make trials-negative=) and =tools/forthfmt.py --check= on every
+sea-trial. =make tools= installs the pinned Mermaid parser
+(=tools/package.json=: mermaid 12.2.0, jsdom 30.1.3).
+
+Observed results and the cell they ran on are recorded in the git note
+of the commit that introduced them.
+
+* Open items
+
+| Item                                                      | Trigger that forces a revisit                          |
+|-----------------------------------------------------------+--------------------------------------------------------|
+| Host language for M2 (Rust native first, or C first)      | starting M2                                            |
+| Layer-1 sea-trials (400-499) do not exist yet             | experiment 003 reaching refinement                     |
+| =.out= files assume gforth's =.= and =.r= spacing          | first host that fails only under =--loose=             |
+| =nand= is emulated on gforth in exp 001                   | M2 provides a real =nand=                              |
+| WAForth support for the =\ layer: 0= tests is unverified  | M4b                                                    |
+| Mermaid diagrams are syntax-checked, not render-checked   | a diagram renders wrongly on GitHub                     |
+
+* Review ledger
+
+Deviations declared while establishing the project are recorded in
+=docs/review-ledger.org= and reconciled at spec v0.2.
+
+* Derived files
+
+#+begin_src markdown :tangle README.md :noweb yes
+> Derived from spec.org @ v0.1. The spec governs; if this file disagrees with it, this file is the bug. Do not add facts here that are not in the spec — add them to the spec first.
+
+# forth-keel
+
+A Forth system built in three layers, each written on top of the one
+below, and tested against a fixed oracle corpus of SICP programs.
+
+| Layer    | Written in | Contents |
+|----------|------------|----------|
+| keel     | host language (Rust, C) | 13 primitives and the inner interpreter |
+| frames   | Forth | stack words, arithmetic, control flow, compiler, outer interpreter |
+| planking | Forth | tagged cells, pairs, symbols, closures, promises, Cheney GC, reader |
+
+```mermaid
+<<d-kernel-levels>>
+```
+
+## Build sequence
+
+```mermaid
+<<d-build-sequence>>
+```
+
+## Commands
+
+- `make test` — code gate: experiments and sea-trials on gforth
+- `make docs` — docs gate, including negative fixtures
+- `make tangle` — regenerate derived files from `spec.org`
+- `make tangle-check` — confirm derived files match `spec.org`
+- `scripts/pull-resources.sh` — fetch reference sources into `resources/vendor/`
+
+All diagrams: [docs/architecture.md](docs/architecture.md).
+Governing spec: [spec.org](spec.org).
+#+end_src
+
+#+begin_src markdown :tangle docs/architecture.md :noweb yes
+> Derived from spec.org @ v0.1. The spec governs; if this file disagrees with it, this file is the bug. Do not add facts here that are not in the spec — add them to the spec first.
+
+# forth-keel architecture
+
+Diagram sources are in [diagrams/](diagrams/). Text, requirements and
+labels are in [../spec.org](../spec.org).
+
+## 1. Kernel levels
+
+```mermaid
+<<d-kernel-levels>>
+```
+
+## 2. Primitive derivation
+
+```mermaid
+<<d-primitive-derivation>>
+```
+
+## 3. Memory map
+
+```mermaid
+<<d-memory-map>>
+```
+
+## 4. Inner and outer interpreter
+
+```mermaid
+<<d-interpreter-states>>
+```
+
+## 5. Object layout (planking)
+
+```mermaid
+<<d-object-layout>>
+```
+
+## 6. Garbage collection (Cheney)
+
+```mermaid
+<<d-cheney-gc>>
+```
+
+## 7. System context
+
+```mermaid
+<<d-system-context>>
+```
+
+## 8. ClojureScript interop
+
+```mermaid
+<<d-cljs-interop>>
+```
+
+## 9. Build sequence
+
+```mermaid
+<<d-build-sequence>>
+```
+
+## 10. Gating by sea-trials layer
+
+```mermaid
+<<d-test-gating>>
+```
+
+## 11. Incremental development loop
+
+```mermaid
+<<d-cprr-loop>>
+```
+
+## 12. Repository layout
+
+```mermaid
+<<d-repo-layout>>
+```
+#+end_src
+
+#+begin_src markdown :tangle AGENTS.md
+> Derived from spec.org @ v0.1. The spec governs; if this file disagrees with it, this file is the bug. Do not add facts here that are not in the spec — add them to the spec first.
+
+# Working in forth-keel
+
+- `spec.org` governs. Change it first, then run `make tangle`. Never edit
+  a derived file by hand: README.md, AGENTS.md, CLAUDE.md,
+  docs/architecture.md, docs/diagrams/*.mmd, resources/README.md,
+  scripts/pull-resources.sh.
+- Layers: keel (host language) → frames (Forth) → planking (Forth). A
+  layer uses only the layer below it and its own earlier definitions.
+- New behaviour starts as `experiments/NNN-name/` with CONJECTURE.md
+  (falsification criteria, labelled claims) and a Makefile whose
+  `make test` passes inside the directory. Never reuse or delete an
+  experiment number.
+- Oracle: `sea-trials/`. Expected output comes from gforth 0.7.3.
+  Regenerate with `sea-trials/run.sh --regen` only for a new test, and
+  check every value by hand before committing.
+- Gates before claiming done: `make test`, `make docs`, `make tangle-check`.
+  Zero findings; there is no warning tier.
+- Commits: conventional, one logical step each, with a git note holding
+  a Timeline (including failures) and a Reproduction (command, output,
+  cell).
+- Deferred or suspected-wrong work goes in an issue with the trigger
+  that forces the revisit, not in a source comment.
+- Declared deviations go in docs/review-ledger.org.
+#+end_src
+
+#+begin_src markdown :tangle CLAUDE.md
+> Derived from spec.org @ v0.1. The spec governs; if this file disagrees with it, this file is the bug. Do not add facts here that are not in the spec — add them to the spec first.
+
+Read [AGENTS.md](AGENTS.md) before working in this repository. The
+governing document is [spec.org](spec.org).
+#+end_src

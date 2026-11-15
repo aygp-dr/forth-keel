@@ -1,0 +1,16 @@
+flowchart TD
+  M0["M0 oracle: sea-trials + runner (done)"]
+  M1["M1 frames data words on gforth, exp 001 (done)"]
+  M2["M2 keel-rs native: 13 primitives + NEXT"]
+  M3["M3 frames complete on keel-rs: sea-trials layer 0"]
+  M4["M4 keel-rs to wasm32 + node runner: layer 0"]
+  M4b["M4b WAForth host via node: layer 0 baseline"]
+  M5["M5 ClojureScript app loads the wasm keel"]
+  M6["M6 planking cells, pairs, symbols, exp 002 onward"]
+  M7["M7 closures, apply, delay/force"]
+  M8["M8 Cheney GC"]
+  M9["M9 reader + metacircular evaluator (SICP 4.1)"]
+  M0 --> M1 --> M2 --> M3 --> M4 --> M5
+  M0 --> M4b --> M5
+  M3 --> M6 --> M7 --> M8 --> M9
+  M4 --> M9

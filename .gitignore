@@ -1,0 +1,3 @@
+# Derived from spec.org @ v0.1. The spec governs; if this file disagrees with it, this file is the bug.
+resources/vendor/
+tools/node_modules/

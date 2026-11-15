@@ -1,0 +1,25 @@
+flowchart TB
+  subgraph SRC["Forth source (identical on every host)"]
+    frames["frames/*.fs"]
+    planking["planking/*.fs"]
+  end
+  subgraph HOSTS["hosts"]
+    gforth["gforth 0.7.3 (reference oracle)"]
+    rsnative["keel-rs native (cargo test)"]
+    rswasm["keel-rs wasm32 (wasm-bindgen)"]
+    waforth["WAForth (comparison host)"]
+  end
+  subgraph WEB["browser"]
+    cljs["ClojureScript app (shadow-cljs)"]
+    ui["REPL, stack view, dictionary view"]
+  end
+  trials["sea-trials runner"]
+  SRC --> rsnative
+  SRC --> rswasm
+  rswasm --> cljs
+  waforth --> cljs
+  cljs --> ui
+  gforth -->|generates .out| trials
+  rsnative -->|checked by| trials
+  rswasm -->|checked by, via node| trials
+  waforth -->|checked by, via node| trials

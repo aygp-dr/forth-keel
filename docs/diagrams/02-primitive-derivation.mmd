@@ -1,0 +1,34 @@
+flowchart LR
+  fetch["@"] --> dup
+  spat["sp@"] --> dup
+  nand --> invert
+  dup --> invert
+  invert --> and_["and"]
+  nand --> and_
+  invert --> negate
+  plus["+"] --> negate
+  negate --> minus["-"]
+  plus --> minus
+  spat --> cell
+  minus --> cell
+  dup --> drop
+  minus --> drop
+  plus --> drop
+  spat --> over
+  cell --> over
+  fetch --> over
+  over --> swap
+  store["!"] --> swap
+  cell --> swap
+  swap --> or_["or"]
+  invert --> or_
+  and_ --> or_
+  rpat["rp@"] --> tor[">r  r>"]
+  swap --> tor
+  rpat --> branch["branch  ?branch  lit"]
+  zeq["0="] --> branch
+  branch --> ifthen["if then begin while repeat"]
+  tor --> rot
+  swap --> rot
+  umstar["um*"] --> star["*"]
+  umslash["um/mod"] --> divmod["/  mod  /mod"]

@@ -1,0 +1,12 @@
+flowchart LR
+  subgraph MEM["linear memory (low address to high)"]
+    direction LR
+    sys["system variables: here latest state base hp"]
+    tib["terminal input buffer"]
+    dict["dictionary: headers + threaded code, grows up"]
+    from["heap semispace A (from-space)"]
+    to["heap semispace B (to-space)"]
+    ds["data stack, grows down"]
+    rs["return stack, grows down"]
+  end
+  sys --- tib --- dict --- from --- to --- ds --- rs

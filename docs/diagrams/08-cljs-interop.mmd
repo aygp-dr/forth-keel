@@ -1,0 +1,14 @@
+sequenceDiagram
+  participant U as user
+  participant C as ClojureScript
+  participant J as wasm-bindgen glue
+  participant K as keel (wasm)
+  C->>J: dynamic-import /pkg/keel.js
+  J->>K: instantiate keel_bg.wasm
+  C->>K: new Forth() (loads frames + planking)
+  U->>C: types "10 4 cc ."
+  C->>K: interpret(src)
+  K-->>C: Ok("292 ")
+  C->>K: stack()
+  K-->>C: [ ]
+  C-->>U: render output, stack, dictionary
