@@ -1,0 +1,4 @@
+catch throw: 7 
+catch ok: 0 42 
+rethrow: 107 
+throw 0: continued

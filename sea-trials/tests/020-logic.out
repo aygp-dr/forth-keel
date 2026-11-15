@@ -1,0 +1,9 @@
+true false: -1 0 
+and or xor: 8 14 6 
+invert: -1 
+= <>: -1 0 -1 
+< >: -1 0 -1 
+u<: -1 0 
+0= 0< 0<> 0>: -1 0 -1 -1 -1 
+lshift rshift: 16 16 
+within: -1 0 

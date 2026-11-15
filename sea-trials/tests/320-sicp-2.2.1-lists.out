@@ -1,0 +1,9 @@
+la: ( 1 2 3 )
+lb: ( 4 5 )
+car cdr: 1 ( 2 3 )
+append: ( 1 2 3 4 5 )
+length: 3 0 
+l-ref 2: 3 
+map square: ( 1 4 9 )
+reverse: ( 5 4 3 2 1 )
+la unchanged: ( 1 2 3 )

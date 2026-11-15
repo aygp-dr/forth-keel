@@ -1,0 +1,5 @@
+smallest-divisor: 199 1999 7 
+primes < 50: 2 3 5 7 11 13 17 19 23 29 31 37 41 43 47 
+expmod: 24 1 1 
+561 fermat-all?: -1 0 
+97 fermat-all?: -1 -1 

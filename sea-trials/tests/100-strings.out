@@ -1,0 +1,10 @@
+.q: hello
+type: abc
+length: 5 
+char: 65 
+[char]: 122 
+emit: Forth
+spaces: [   ]
+.r: [   42]
+c@ string: 104 
+compare: 0 -1 1 

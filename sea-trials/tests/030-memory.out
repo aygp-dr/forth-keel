@@ -1,0 +1,9 @@
+! @: 5 
++!: 8 
+constant: 42 
+value: 10 20 
+create ,: 1 2 3 
+allot: 3 
+c! c@: 65 
+fill type: zzzz
+move: 3 

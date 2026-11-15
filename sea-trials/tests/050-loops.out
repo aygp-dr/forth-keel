@@ -1,0 +1,10 @@
+until: 5 4 3 2 1 
+while: 40 20 10 5 2 1 
+do loop: 0 1 4 9 16 
++loop: 0 2 4 6 8 
+-loop: 10 8 6 4 2 0 
+?do: none
+i j: 0 1 10 11 20 21 
+leave: 0 1 2 3 4 
+unloop exit: 3 
+case: sun weekday sat 
