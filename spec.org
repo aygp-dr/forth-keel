@@ -491,6 +491,7 @@ flowchart LR
 | 006 | cheney-gc            | R-P-06           | planned                |
 | 007 | reader               | R-P-07           | planned                |
 | 008 | frames-on-keel       | R-F-01, R-K-02   | proof passes           |
+| 009 | control-from-rp      | R-F-02           | proof passes           |
 
 * Resources
 
