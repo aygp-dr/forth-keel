@@ -6,6 +6,7 @@ import shutil
 
 SPEC = """#+TITLE: fixture
 * Scope
+* Working rules
 * Survey and names
 * Architecture
 #+begin_src mermaid

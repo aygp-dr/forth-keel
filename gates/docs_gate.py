@@ -19,7 +19,7 @@ import re
 import subprocess
 import sys
 
-REQUIRED_SECTIONS = ["Scope", "Survey and names", "Architecture", "Build sequence", "Requirements",
+REQUIRED_SECTIONS = ["Scope", "Working rules", "Survey and names", "Architecture", "Build sequence", "Requirements",
                      "Experiments", "Resources", "Gates", "Open items", "Review ledger", "Derived files"]
 SKIP_DIRS = {".git", "vendor", "node_modules", "fixtures"}
 HEADER = "Derived from spec.org"
