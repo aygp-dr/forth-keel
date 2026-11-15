@@ -1,0 +1,42 @@
+#+TITLE: review ledger: reconcile at spec v0.2
+
+Deviations declared while establishing forth-keel. Each entry is
+reconciled at spec v0.2.
+
+* 2026-11-15 — tooling language
+- Deviation: =tools/forthfmt.py= and =gates/docs_gate.py= are Python;
+  the house preference is Babashka.
+- Why reality demanded it: the build cell could not install Babashka;
+  Python 3 was available and could be run against gforth here.
+- Target rule still stands: yes, tooling in the project's tool language.
+- Reconcile: port both to Babashka, or record Python as the gate language.
+
+* 2026-11-15 — experiment 001 runs frames on a host compiler
+- Deviation: =experiments/001-frames-from-nand= uses gforth's =:=, =;=
+  and number parser, and emulates =nand= as =and invert=.
+- Why reality demanded it: there is no keel yet (M2); the data words can
+  be checked on a host, control flow cannot.
+- Target rule still stands: yes, frames use keel primitives only (R-F-01, R-F-02).
+- Reconcile: re-run the same 432 checks on keel-rs at M3.
+
+* 2026-11-15 — sea-trials changed after the corpus tarball was sent
+- Deviation: =sea-trials/= differs from =forth-oracle-corpus.tar.gz=:
+  every test gained a =\ layer:= line; =010-arith= prints =um*= and
+  =m*= results as two cells instead of =d.=; =110-base= dropped its =d.=
+  line. Both now need no DOUBLE wordset and are layer 0.
+- Why reality demanded it: layer tagging (R-T-01) and keeping =um*= /
+  =um/mod= testable at layer 0, where they are keel primitives.
+- Target rule still stands: yes, =.out= files are regenerated only for
+  changed tests and checked by hand.
+- Reconcile: treat =sea-trials/= in this repository as the corpus of
+  record; discard the earlier tarball.
+
+* 2026-11-15 — component documents not tangled from the spec
+- Deviation: =sea-trials/README.org=, =experiments/README.md= and the
+  experiment documents are written directly, not tangled.
+- Why reality demanded it: they describe one component in detail;
+  tangling them would move most of their text into =spec.org=.
+- Target rule still stands: yes, no fact may appear in them that
+  contradicts =spec.org=.
+- Reconcile: decide at v0.2 whether =experiments/README.md= is tangled
+  from the spec's Experiments table.
