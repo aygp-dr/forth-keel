@@ -492,6 +492,7 @@ flowchart LR
 | 007 | reader               | R-P-07           | planned                |
 | 008 | frames-on-keel       | R-F-01, R-K-02   | proof passes           |
 | 009 | control-from-rp      | R-F-02           | proof passes           |
+| 010 | compile-from-the-map | R-F-02, R-K-04   | proof passes           |
 
 * Resources
 
