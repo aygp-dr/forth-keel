@@ -1,0 +1,23 @@
+#+TITLE: fixture
+* Scope
+* Survey and names
+* Architecture
+#+begin_src mermaid
+flowchart LR
+  a --> b
+#+end_src
+* Build sequence
+* Requirements
+| ID     | Statement |
+|--------+-----------|
+| R-X-01 | example   |
+* Experiments
+* Resources
+* Gates
+* Review ledger
+* Derived files
+#+begin_src markdown :tangle README.md
+> Derived from spec.org @ fixture.
+
+See [spec](spec.org).
+#+end_src

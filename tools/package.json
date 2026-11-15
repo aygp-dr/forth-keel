@@ -1,0 +1,10 @@
+{
+  "name": "forth-keel-tools",
+  "private": true,
+  "description": "Mermaid syntax check for the docs gate",
+  "type": "module",
+  "dependencies": {
+    "jsdom": "30.1.3",
+    "mermaid": "12.2.0"
+  }
+}
