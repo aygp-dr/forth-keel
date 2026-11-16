@@ -1,0 +1,7 @@
+Timeline
+- Notes added to spec.org's README block, then gmake tangle; tangle-check PASS 21 files.
+- The toolchain list and the wasm build steps are the ones that made gmake all pass here.
+
+Reproduction
+  gmake all -> experiments 000-010 incl. keel host (432/18/11 checks, all negative controls rejected), sea-trials 29/29, docs-gate PASS (7 checks), tangle-check PASS 21 files; exit 0
+Cell: macOS 15.1 arm64, GNU make, bash 5.2, gforth 0.7.3, Rust 1.100, wasm-pack 0.15.1, node 26.2, Emacs 32.0.50
