@@ -1,0 +1,31 @@
+Timeline
+- Reasoned first that >r could not be derived without rp!, since storing
+  through rp@ cannot add a return-stack cell, and was about to file that
+  as a spec defect.
+- Checked the prior art instead, which is why the claim survived:
+  sectorforth derives >r from the same eight primitives with no rp!, via
+  the >rexit trick. The vendored copy pulled by scripts/pull-resources.sh
+  is what made that checkable. Reading examples/01-helloworld.f also gave
+  branch, ?branch and lit in full.
+- Independently derived the ?branch masking before finding sectorforth
+  uses the same technique; kept `cell` derived rather than its literal 2,
+  so the source assumes no cell width.
+- Learned the body base without allocating: vm.compile([]) returns HERE
+  and writes nothing, which is how &exit is resolved before the body
+  exists. No change to keel-wasm was needed.
+- Failure: the three negative controls exited non-zero but as uncaught
+  node exceptions, because a wrong definition faults the kernel. run()
+  now catches and reports "kernel error: ..." as a failed check, which
+  is how the 11/4/5 failure counts became legible.
+- Did not add a gforth host: these words depend on the caller's
+  instruction pointer being a cell on the return stack, which is a
+  property of this engine's threading, not of Forth.
+
+Reproduction
+- Command: gmake -C experiments/009-control-from-rp test
+- Output: "keel host:   18 checks, 0 failures"; "PASS 3 negative
+  controls rejected (lit, ?branch, r> exit address)"; exit 0.
+- Then: gmake all -> pass 29 fail 0 skip 0; docs-gate PASS (7 checks);
+  tangle-check PASS 21 files; exit 0.
+- Cell: nexus, FreeBSD 15.1-RELEASE amd64, node v24.14.1, keel_wasm from
+  wasm-pack 0.14.0.

@@ -1,0 +1,24 @@
+Timeline
+- Started from the gap experiment 009 left: the compiling words need here
+  and `,`, and the keel provides no variables at all.
+- Checked sectorforth first, which provides here as one of five variable
+  words. That framed the question as "is R-K-01 one primitive short?"
+  rather than "how do I work around this".
+- Found the answer in R-K-04 instead of in a new primitive: the map fixes
+  HERE at address zero, and frames can already derive zero without a
+  literal. Nothing needed adding to the keel.
+- Failure: negative control B escaped the harness. A wrong here corrupts
+  SYS_HERE itself, so the next vm.compile([]) read an unaligned HERE and
+  threw outside run()'s try/catch. Wrapped the whole check sequence so a
+  corrupted dictionary reports ABORTED with the reason.
+- Slip: reused experiment 009's Makefile and left its "PASS 3 negative
+  controls" label on a target that now runs two. Corrected.
+
+Reproduction
+- Command: gmake -C experiments/010-compile-from-the-map test
+- Output: "keel host:   11 checks, 0 failures"; "PASS 2 negative controls
+  rejected (comma, here)"; exit 0.
+- Then: gmake all -> pass 29 fail 0 skip 0; docs-gate PASS (7 checks);
+  tangle-check PASS 21 files; exit 0.
+- Cell: nexus, FreeBSD 15.1-RELEASE amd64, node v24.14.1, keel_wasm from
+  wasm-pack 0.14.0.

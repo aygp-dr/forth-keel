@@ -1,0 +1,23 @@
+Timeline
+- Ran scripts/pull-resources.sh on nexus, which the spec said still
+  needed doing. Exit 1: seven pins and one page fine,
+  forth-2012-testsuite-annex 433353 bytes.
+- dpans-core: curl (28), 50861 of 90118 bytes after 60s. Retried by
+  hand with --max-time 180: succeeded in 62.5s, 90118 bytes. So the
+  limit was the bug, not the host.
+- cheney-1970: curl (22) 403. Followed the redirect chain to confirm
+  before changing anything: doi.org -> dl.acm.org, HTTP 403. A paywalled
+  DOI cannot be a fetched artifact, so it became a citation rather than
+  being given a longer timeout or a substituted URL.
+- Checked the sicp page too, since 4978 bytes looked wrong for a book:
+  it is genuinely the SICP web site index ("Welcome to the SICP Web
+  Site"), so the entry is correct as it stands.
+
+Reproduction
+- Command: gmake tangle && ./scripts/pull-resources.sh
+- Output: seven "git <key> @ <sha>" lines; web
+  forth-2012-testsuite-annex (433353 bytes); web dpans-core (90118
+  bytes); web sicp (4978 bytes); exit 0.
+- Then: gmake all -> docs-gate PASS (7 checks); tangle-check PASS 21
+  files; pass 29 fail 0 skip 0; exit 0.
+- Cell: nexus, FreeBSD 15.1-RELEASE amd64, curl 8.x, git 2.x.

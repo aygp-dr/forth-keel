@@ -1,0 +1,31 @@
+Timeline
+- Read experiment 001's frames.fs and test.fs first to re-run the same
+  checks rather than something adjacent. The grid is 2 unary x 9 + 5
+  binary x 81 + 8 stack words + 1 cell check = 432.
+- Found the single host dependency worth removing: the literal 1 in
+  negate. cell was already derived as sp@ sp@ -, so nothing else needed
+  a number.
+- Derived one ( -- 1 ) and checked the identity by hand before writing
+  it: invert(-2) = 1 because invert n = -n-1.
+- Failure: the gforth check used if/else at interpretation time, which
+  gforth rejects as compile-only ("Interpreting a compile-only word").
+  Captured the xt in a constant and wrapped the test in a definition.
+- Failure: the keel runner reported the literal refusal as a raw node
+  traceback. A refusal is a designed outcome of this experiment, so it
+  now prints one REFUSED line.
+- Did not reset the VM between checks: keel's reset rewinds HERE to the
+  dictionary base, which would invalidate every seeded body. The
+  harness drains the stack by popping instead.
+- Compared exact stacks on the keel host rather than experiment 001's
+  31*+ fingerprint, which is strictly stronger.
+
+Reproduction
+- Command: gmake -C experiments/008-frames-on-keel test
+- Output: "gforth host: 432 checks, 0 failures"; "PASS one derives 1
+  without a literal"; "keel host:   432 checks, 0 failures"; "PASS one
+  derives 1 without a literal"; "PASS 3 negative controls rejected
+  (broken swap, literal, word outside the keel)"; exit 0.
+- Then: gmake all -> pass 29 fail 0 skip 0; docs-gate PASS (7 checks);
+  8 fixture assertions PASS; tangle-check PASS 21 files; exit 0.
+- Cell: nexus, FreeBSD 15.1-RELEASE amd64, gforth 0.7.3 built from
+  source, node v24.14.1, keel_wasm_bg.wasm from wasm-pack 0.14.0.
