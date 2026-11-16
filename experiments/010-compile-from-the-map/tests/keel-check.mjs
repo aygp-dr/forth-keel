@@ -25,7 +25,7 @@ if (!framesPath) {
 if (!existsSync(pkg)) {
   console.log(`SKIP keel host: no keel-wasm build at ${pkg}`);
   console.log("     build it with: wasm-pack build <keel-rs>/keel-wasm --target nodejs --out-dir pkg");
-  process.exit(0);
+  process.exit(77); // skipped, not passed: see the Makefile
 }
 
 const { Keel } = createRequire(import.meta.url)(pkg);
