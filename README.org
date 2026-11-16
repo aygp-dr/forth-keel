@@ -57,6 +57,29 @@ On FreeBSD use =gmake=: these makefiles need GNU make. The gates also
 need bash, gforth 0.7.3, Emacs, Python 3, and node for the Mermaid
 check; =gmake tools= installs the pinned Mermaid parser.
 
+On macOS the stock tools fall short in three places: =make= is GNU
+make 3.81 (the makefiles need 3.82+), =/bin/bash= is 3.2 (the
+sea-trials runner needs 4+), and there is no =timeout= (the runner
+accepts Homebrew's =gtimeout=):
+
+#+begin_src sh
+brew install make bash coreutils gforth node python emacs
+#+end_src
+
+Experiments 008-010 also run on the Rust keel when its wasm build
+exists; without it they report SKIP rather than fail. To build it (Rust
+1.91 or newer for =wasm-pack=):
+
+#+begin_src sh
+rustup target add wasm32-unknown-unknown
+cargo install wasm-pack --locked
+wasm-pack build ../keel-rs/keel-wasm --target nodejs --out-dir pkg
+#+end_src
+
+=gmake all= passed on macOS 15.1 (arm64) on 2026-11-15 with GNU make,
+bash 5.2, gforth 0.7.3, Rust 1.100 and node 26: experiments 000-010
+including the keel host, sea-trials 29/29, docs and tangle-check.
+
 * Where things are
 
 - [[file:spec.org][spec.org]] — the governing specification: 23 requirements, each with
