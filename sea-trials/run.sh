@@ -40,6 +40,16 @@ if [ "$lint" = 1 ]; then
   exit "$bad"
 fi
 
+# Associative arrays need bash 4; macOS /bin/bash is 3.2 (brew install bash).
+if [ "${BASH_VERSINFO[0]}" -lt 4 ]; then
+  echo "sea-trials: needs bash 4 or later, this is $BASH_VERSION (macOS: brew install bash)" >&2; exit 2
+fi
+# Each test runs under a 20 s timeout. GNU coreutils names it timeout; on macOS
+# Homebrew's coreutils installs it as gtimeout unless gnubin is on PATH.
+if command -v timeout > /dev/null 2>&1; then to=timeout
+elif command -v gtimeout > /dev/null 2>&1; then to=gtimeout
+else echo "sea-trials: needs timeout(1) (macOS: brew install coreutils)" >&2; exit 2
+fi
 declare -A lp lf
 pass=0 fail=0 skip=0
 tmp=$(mktemp); trap 'rm -f "$tmp"' EXIT
@@ -54,7 +64,7 @@ for t in tests/*.fs; do
     if [ -n "$missing" ]; then echo "SKIP $name (needs$missing)"; skip=$((skip+1)); continue; fi
   fi
   cmd=${impl//\{\}/$t}
-  actual=$(timeout 20 bash -c "$cmd" 2>&1 < /dev/null)
+  actual=$("$to" 20 bash -c "$cmd" 2>&1 < /dev/null)
   if [ "$regen" = 1 ]; then printf '%s\n' "$actual" > "tests/$name.out"; echo "REGEN $name"; continue; fi
   if diff -u <(norm < "tests/$name.out") <(printf '%s\n' "$actual" | norm) > "$tmp"; then
     echo "PASS $name"; pass=$((pass+1)); lp[$layer]=$(( ${lp[$layer]:-0} + 1 ))
