@@ -1,0 +1,11 @@
+Timeline
+- 2026-11-15 20:02: gmake all on macOS with no keel-wasm build: 008 printed SKIP for the keel host, then FAIL negative control broken-swap was accepted.
+- Cause: keel-check.mjs exits 0 when it skips, so each negative control's check passed and read as accepted. Same in 009 and 010.
+- Fix: exit 77 on skip; host-keel maps 77 to a skip; negative probes once and prints SKIP negative controls: no keel host.
+
+Reproduction
+  KEEL_WASM_PKG=/nonexistent/keel_wasm.js gmake -s -C experiments/008-frames-on-keel test
+  before: FAIL negative control broken-swap was accepted (exit 2)
+  after:  keel host: SKIP ... / SKIP negative controls: no keel host (exit 0)
+  with the build present: 432 checks, 0 failures; PASS 3 negative controls rejected (unchanged)
+Cell: macOS 15.1 arm64, node 26.2, gforth 0.7.3
