@@ -1,0 +1,10 @@
+Timeline
+- 2026-11-15: guile-keel's macOS CI job failed every sea-trial with run.sh: line 57: timeout: command not found. macOS has no timeout; Homebrew coreutils installs gtimeout.
+- run.sh also uses declare -A (bash 4); macOS /bin/bash is 3.2.
+- Fix: use timeout, else gtimeout, else stop with an install hint; check BASH_VERSINFO before declare -A. --lint still works on 3.2.
+
+Reproduction
+  PATH=<gforth,gtimeout,bash>:/usr/bin:/bin sea-trials/run.sh   -> pass 29  fail 0  skip 0
+  PATH=<no timeout> sea-trials/run.sh gcd   -> sea-trials: needs timeout(1) (macOS: brew install coreutils)
+  /bin/bash sea-trials/run.sh gcd            -> sea-trials: needs bash 4 or later, this is 3.2.57(1)-release
+Cell: macOS 15.1 arm64
