@@ -1,0 +1,12 @@
+RESULT exact ok 0 4 4 4 4
+RESULT register-48 fail 1 1 0 4 4
+RESULT undefined fail 2 1 0 4 4
+RESULT subtract-eq fail 3 2 1 4 4
+RESULT subtract-neg fail 3 2 1 4 4
+RESULT inexact fail 4 3 2 4 4
+RESULT over-limit fail 5 4 3 3 3
+RESULT mul-wrap fail 5 1 1 1 0
+RESULT uncovered fail 7 3 3 4 4
+RESULT start-covers ok 0 1 2 2 1
+RESULT dest-is-source ok 0 1 1 1 1
+RESULT at-limit ok 0 1 1 1 1
