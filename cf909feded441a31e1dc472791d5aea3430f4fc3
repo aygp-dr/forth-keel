@@ -1,0 +1,14 @@
+Timeline
+- 3dup is not in gforth 0.7.3; defined locally in solve.fs.
+- macOS make is GNU 3.81, which ignores .RECIPEPREFIX: use gmake.
+- BSD sed has no \b; the register-flag rename went through perl.
+- First baseline took 7 instructions on the worked example (optimum 4):
+  it never checked whether two held values combine into a target. The
+  reuse variant adds that check and finds 4.
+
+Reproduction
+  gmake -C experiments/011-elf-calculator test
+  -> PASS baseline: 100 programs, 58030 instructions
+  -> PASS reuse: 100 programs, 53229 instructions
+  -> PASS 5 negative controls rejected (divide, limit, subtract, undefined, csv)
+  cell: 8 bytes (gforth 0.7.3, darwin arm64)
